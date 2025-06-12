@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Impulso IA: Análisis Interactivo para Negocios en Colombia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        #cursor-spotlight {
+            background: radial-gradient(circle 400px at var(--x) var(--y), rgba(129, 140, 248, 0.15), transparent 80%);
+            mix-blend-mode: soft-light;
+        }
+        .dark #cursor-spotlight {
+            background: radial-gradient(circle 300px at var(--x) var(--y), rgba(79, 70, 229, 0.2), transparent 80%);
+            mix-blend-mode: screen;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 450px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        .active-tool {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border-width: 2px;
+        }
+        .dark .active-tool {
+             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.25);
+        }
+        .active-tab, .deep-dive-tab.active {
+            background-color: #4f46e5;
+            color: #ffffff;
+        }
+        .tab-btn, .deep-dive-tab {
+            transition: all 0.3s ease;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4f46e5;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .tool-checkbox:checked + label {
+            border-color: #4f46e5;
+            background-color: #eef2ff;
+        }
+        .dark .tool-checkbox:checked + label {
+            border-color: #6366f1;
+            background-color: #3730a3;
+        }
+        /* Style for active nav link */
+        .nav-link.active {
+            font-weight: 600;
+            color: #4f46e5;
+        }
+        .dark .nav-link.active {
+            color: #818cf8;
+        }
+        section {
+            scroll-margin-top: 4.5rem; /* Offset for sticky header */
+        }
+        .copy-toast {
+            transition: opacity 0.3s ease-in-out;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+</head>
+<body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-200 transition-colors duration-300">
+    
+    <div id="cursor-spotlight" class="fixed top-0 left-0 w-full h-full pointer-events-none z-30"></div>
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-md sticky top-0 z-50">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <a href="#" class="flex items-center">
+                        <svg class="h-8 w-8 mr-2" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color: #3B82F6;" />
+                                    <stop offset="100%" style="stop-color: #14B8A6;" />
+                                </linearGradient>
+                            </defs>
+                            <path d="M14 20.5V16.5C14 15.3954 13.1046 14.5 12 14.5H10.5M3.5 10H7.5C8.60457 10 9.5 9.10457 9.5 8V3.5" stroke="url(#logo-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M3.5 14H7.5C8.60457 14 9.5 14.8954 9.5 16V20.5" stroke="url(#logo-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M14 3.5V7.5C14 8.60457 14.8954 9.5 16 9.5H20.5" stroke="url(#logo-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M20.5 14H16.5C15.3954 14 14.5 14.8954 14.5 16V20.5" stroke="url(#logo-gradient)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            
+                            <rect x="10" y="10" width="4" height="4" rx="0.5" stroke="url(#logo-gradient)" stroke-width="1.5"/>
+                            <path d="M12 10V8" stroke="url(#logo-gradient)" stroke-width="1.5" stroke-linecap="round"/>
+                            <path d="M12 14V16" stroke="url(#logo-gradient)" stroke-width="1.5" stroke-linecap="round"/>
+                            <path d="M10 12H8" stroke="url(#logo-gradient)" stroke-width="1.5" stroke-linecap="round"/>
+                            <path d="M14 12H16" stroke="url(#logo-gradient)" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                        <span class="text-2xl font-bold text-blue-600 dark:text-blue-500">Impulso IA</span>
+                    </a>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#recommendation-engine" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-white">Asesor</a>
+                        <a href="#tool-selector" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-white">Herramientas</a>
+                        <a href="#deep-dive-comparison" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-white">Comparativa</a>
+                        <a href="#blog" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-white">Blog</a>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <button id="theme-toggle" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <svg id="theme-icon-light" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                        <svg id="theme-icon-dark" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                    </button>
+                    <div class="md:hidden ml-4">
+                        <button id="menu-toggle" class="p-2 rounded-md bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white">
+                            <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- Mobile Menu -->
+            <div id="mobile-menu" class="md:hidden hidden">
+                <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                    <a href="#recommendation-engine" class="mobile-nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-white">Asesor</a>
+                    <a href="#tool-selector" class="mobile-nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-white">Herramientas</a>
+                    <a href="#deep-dive-comparison" class="mobile-nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-white">Comparativa</a>
+                    <a href="#blog" class="mobile-nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-white">Blog</a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 md:py-12">
+        <section class="text-center mb-12 md:mb-16">
+             <h1 class="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-2">
+                Potencia tu Negocio con IA
+            </h1>
+            <p class="text-lg md:text-xl text-gray-600 dark:text-gray-400 max-w-4xl mx-auto">Tu asesor interactivo para descubrir e implementar la Inteligencia Artificial en tu negocio en Colombia.</p>
+        </section>
+
+        <section id="recommendation-engine" class="mb-12 bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg">
+            <h3 class="text-3xl font-bold text-center mb-2 text-gray-900 dark:text-white">Asesor de Estrategia IA (Cuestionario de Diagnóstico)</h3>
+            <p class="text-center text-gray-600 dark:text-gray-400 max-w-3xl mx-auto mb-8">Responde estas preguntas para recibir una recomendación personalizada y un plan de acción generado por IA.</p>
+            
+            <form id="strategy-form" class="max-w-4xl mx-auto space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="companyType" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">1. Tipo de Empresa</label>
+                        <select id="companyType" class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="micro">Microempresa (1-10 empleados)</option>
+                            <option value="pequena">Pequeña empresa (11-50 empleados)</option>
+                            <option value="mediana">Mediana empresa (51-200 empleados)</option>
+                            <option value="informal">Empresa Informal / Vendedor</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="sector" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">2. Sector Económico</label>
+                        <select id="sector" class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="primario">Primario (Agricultura, minería)</option>
+                            <option value="secundario">Secundario (Industria, construcción)</option>
+                            <option value="terciario">Terciario (Comercio, servicios)</option>
+                            <option value="cuaternario">Cuaternario (Tecnología, consultoría)</option>
+                        </select>
+                    </div>
+                </div>
+                 <div>
+                    <label for="business-description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">3. En una frase, ¿a qué se dedica tu negocio?</label>
+                    <input type="text" id="business-description" class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ej: Venta de café orgánico de origen a clientes finales.">
+                </div>
+                <div>
+                    <label for="improvement-goal" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">4. ¿Qué te gustaría mejorar o conseguir?</label>
+                    <textarea id="improvement-goal" rows="2" class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ej: Aumentar ventas, automatizar la creación de contenido para redes, ahorrar tiempo..."></textarea>
+                </div>
+                <div>
+                    <label for="current-problem" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">5. ¿Cuál es tu problemática o desafío actual?</label>
+                    <textarea id="current-problem" rows="2" class="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ej: Me demoro mucho creando videos, mi equipo no organiza bien los proyectos..."></textarea>
+                </div>
+                <div class="text-center pt-4">
+                    <button type="button" id="get-recommendation-btn" class="bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-indigo-700 transition-colors duration-300">Obtener Recomendación</button>
+                </div>
+            </form>
+            <div id="recommendation-result" class="bg-gray-100 dark:bg-gray-700/50 p-6 rounded-lg border border-gray-200 dark:border-gray-700 min-h-[10rem] transition-all duration-300 hidden mt-8">
+            </div>
+        </section>
+
+        <section id="tool-selector" class="mb-12">
+             <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold">Selector de Herramientas IA</h2>
+                <p class="text-lg text-gray-700 dark:text-gray-300 mt-2">Selecciona una herramienta para explorar sus características, casos de uso y potencial.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+                <!-- Tool cards will be generated by JS -->
+            </div>
+        </section>
+
+        <div id="dynamic-content-area" class="opacity-0 transition-opacity duration-500">
+            <section id="overview" class="mb-12 bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg">
+                <h3 class="text-3xl font-bold text-center mb-2 text-gray-900 dark:text-white" id="overview-title"></h3>
+                 <p id="overview-intro" class="text-center text-gray-600 dark:text-gray-400 max-w-3xl mx-auto mb-8"></p>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <h4 class="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300">Propuesta de Valor Clave</h4>
+                        <ul id="overview-value-list" class="space-y-3 text-gray-600 dark:text-gray-400">
+                        </ul>
+                        <h4 class="text-xl font-semibold mt-6 mb-4 text-gray-700 dark:text-gray-300">Ideal para</h4>
+                        <p id="overview-ideal-for" class="text-gray-600 dark:text-gray-400"></p>
+                    </div>
+                     <div>
+                        <h4 class="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300 text-center">Análisis de Dimensiones</h4>
+                        <div class="chart-container">
+                            <canvas id="impactChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="use-cases" class="mb-12 bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg">
+                 <h3 class="text-3xl font-bold text-center mb-2 text-gray-900 dark:text-white">Casos de Uso Aplicados</h3>
+                 <p class="text-center text-gray-600 dark:text-gray-400 max-w-3xl mx-auto mb-8">Descubre cómo esta herramienta se aplica en diferentes áreas de negocio. Selecciona una categoría para ver ejemplos prácticos.</p>
+                <div class="flex justify-center flex-wrap gap-2 md:gap-4 mb-8" id="use-case-tabs">
+                </div>
+                <div id="use-case-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                </div>
+            </section>
+        </div>
+
+        <section id="deep-dive-comparison" class="mb-12 bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg">
+            <h3 class="text-3xl font-bold text-center mb-2 text-gray-900 dark:text-white">Comparativa Profunda por Categorías</h3>
+            <p class="text-center text-gray-600 dark:text-gray-400 max-w-3xl mx-auto mb-8">Selecciona una o más herramientas para compararlas. Luego, elige una categoría de abajo.</p>
+            
+            <div id="deep-dive-tool-selector" class="flex justify-center flex-wrap gap-3 mb-8">
+                <!-- Tool comparison selectors generated by JS -->
+            </div>
+
+            <div class="flex justify-center flex-wrap gap-2 md:gap-4 mb-8" id="deep-dive-tabs">
+                <!-- Deep dive category tabs generated by JS -->
+            </div>
+            <div id="deep-dive-content" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            </div>
+        </section>
+        
+        <section id="blog" class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg">
+            <h3 class="text-3xl font-bold text-center mb-2 text-gray-900 dark:text-white">Contenido Educativo del Blog</h3>
+            <p class="text-center text-gray-600 dark:text-gray-400 max-w-3xl mx-auto mb-8">Explora nuestras guías y artículos para sacar el máximo provecho a la IA en tu negocio.</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-gray-100 dark:bg-gray-700/50 p-6 rounded-lg">
+                    <h4 class="font-bold text-lg mb-2">Guía de Inicio</h4>
+                    <a href="#" class="text-indigo-600 dark:text-indigo-400 hover:underline">Cómo implementar tu primer chatbot para atención al cliente.</a>
+                </div>
+                <div class="bg-gray-100 dark:bg-gray-700/50 p-6 rounded-lg">
+                    <h4 class="font-bold text-lg mb-2">Marketing</h4>
+                    <a href="#" class="text-indigo-600 dark:text-indigo-400 hover:underline">5 formas de usar IA para mejorar tu estrategia de email marketing.</a>
+                </div>
+                <div class="bg-gray-100 dark:bg-gray-700/50 p-6 rounded-lg">
+                    <h4 class="font-bold text-lg mb-2">Productividad</h4>
+                    <a href="#" class="text-indigo-600 dark:text-indigo-400 hover:underline">Automatiza tus reportes semanales usando IA y ahorra 5 horas de trabajo.</a>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <div id="info-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-[60] hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <header class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 id="info-modal-title" class="text-2xl font-bold text-gray-900 dark:text-white"></h3>
+                <button id="close-info-modal-btn" class="text-gray-400 hover:text-gray-700 dark:hover:text-white text-3xl leading-none">&times;</button>
+            </header>
+            <div id="info-modal-content" class="p-8 overflow-y-auto text-gray-700 dark:text-gray-300">
+            </div>
+        </div>
+    </div>
+    
+    <div id="strategy-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-[60] hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+            <header class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 relative">
+                <h3 class="text-2xl font-bold text-gray-900 dark:text-white">✨ Estrategia de Implementación Personalizada</h3>
+                <button id="copy-strategy-btn" class="absolute top-4 right-16 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600" title="Copiar estrategia">
+                     <svg class="w-6 h-6 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                </button>
+                <button id="close-modal-btn-strategy" class="text-gray-400 hover:text-gray-700 dark:hover:text-white text-3xl leading-none">&times;</button>
+            </header>
+            <div id="strategy-modal-content" class="p-8 overflow-y-auto text-gray-700 dark:text-gray-300">
+                <div class="flex flex-col items-center justify-center h-64">
+                    <div class="loader"></div>
+                    <p class="mt-4 text-gray-600 dark:text-gray-400">Generando estrategia con Gemini...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="copy-toast" class="copy-toast fixed bottom-5 right-5 bg-green-500 text-white py-2 px-4 rounded-lg shadow-lg opacity-0">
+        ¡Estrategia copiada!
+    </div>
+    
+    <footer class="text-center py-8 mt-8">
+        <p class="text-gray-500 dark:text-gray-400">Impulso IA - Potenciando a los emprendedores de Colombia.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const chartLabels = ['Facilidad de Uso', 'Eficiencia', 'Especialización', 'Personalización', 'Accesibilidad'];
+
+            const aiData = {
+                notionAI: { name: 'Notion AI', url: 'https://www.notion.so/product/ai', title: 'Notion AI: Potenciando la Productividad', description: 'Productividad y gestión del conocimiento.', iconColor: 'text-indigo-400', borderColor: 'border-indigo-600', intro: 'Análisis de Notion AI. El gráfico de radar muestra sus fortalezas en facilidad de uso y eficiencia, ideal para una herramienta de productividad general.', functionality: "Notion AI funciona como un asistente integrado que entiende el contexto de tus documentos. Puede generar borradores de texto, resumir reuniones, corregir gramática y estilo, y ayudarte a organizar ideas. Su objetivo es hacer la gestión del conocimiento y la creación de documentos más rápida e inteligente.", valueProps: ['Reduce el tiempo dedicado a redacción y documentación.', 'Centraliza la gestión de proyectos y conocimiento con IA.', 'Mejora la consistencia y calidad de la comunicación interna.'], easeOfUse: "Principiante", pricing: "Desde $8 USD/usuario/mes (fact. anual)", successCase: "Ideal para equipos remotos, agencias creativas y startups que necesitan organizar información y proyectos de forma centralizada y colaborativa.", chartData: { values: [5, 5, 3, 4, 4], bgColor: 'rgba(129, 140, 248, 0.2)', borderColor: 'rgba(129, 140, 248, 1)' }, useCases: { 'Operaciones': [{ title: 'Actas de Reuniones', desc: 'Genera resúmenes automáticos con puntos accionables.' }, { title: 'Creación de Procesos', desc: 'Transforma ideas en Procedimientos Operativos formales.' }], 'RRHH': [{ title: 'Descripciones de Puesto', desc: 'Estandariza la creación de perfiles de trabajo.' }], 'Marketing': [{ title: 'Lluvia de Ideas', desc: 'Desarrolla conceptos y borradores para estrategias de contenido.' }] } },
+                pipedriveAI: { name: 'Pipedrive AI', url: 'https://www.pipedrive.com/es/ai', title: 'Pipedrive AI: Optimizando las Ventas', description: 'Ventas y gestión de relaciones con clientes.', iconColor: 'text-teal-400', borderColor: 'border-teal-600', intro: 'Análisis de Pipedrive AI. El gráfico resalta su alta especialización en ventas y eficiencia, convirtiéndolo en una potente herramienta de CRM.', functionality: "El Asistente de Ventas con IA de Pipedrive analiza tus datos para identificar patrones. Recomienda las próximas acciones, prioriza los leads con mayor probabilidad de cierre y automatiza el seguimiento para que tu equipo se enfoque en vender, no en tareas administrativas.", valueProps: ['Automatiza tareas repetitivas del ciclo de ventas.', 'Prioriza inteligentemente oportunidades de alto valor.', 'Mejora la toma de decisiones con análisis predictivos.'], easeOfUse: "Intermedio", pricing: "Desde $29 USD/usuario/mes (fact. anual)", successCase: "Perfecto para equipos de ventas en PYMES, empresas de SaaS y consultorías que buscan un proceso comercial estructurado y eficiente.", chartData: { values: [4, 4, 5, 4, 3], bgColor: 'rgba(45, 212, 191, 0.2)', borderColor: 'rgba(45, 212, 191, 1)' }, useCases: { 'Ventas': [{ title: 'Asistente de Ventas', desc: 'Recomienda las próximas acciones prioritarias con cada cliente.' }, { title: 'Priorización de Leads', desc: 'Clasifica clientes potenciales según su probabilidad de conversión.' }], 'Comunicación': [{ title: 'Generador de Correos', desc: 'Crea correos electrónicos de seguimiento personalizados y efectivos.' }] } },
+                flikiAI: { name: 'Fliki.ai', url: 'https://fliki.ai/', title: 'Fliki.ai: Creación de Video sin Esfuerzo', description: 'Creación de videos a partir de texto.', iconColor: 'text-orange-400', borderColor: 'border-orange-500', intro: 'Análisis de Fliki.ai. El gráfico subraya su eficiencia y especialización en la creación de video, ideal para marketing de contenidos a escala.', functionality: "Fliki transforma artículos de blog, guiones o cualquier texto en videos con voces de IA realistas y una vasta biblioteca de imágenes y videoclips. Es perfecto para crear contenido para redes sociales, publicidad y videos explicativos en minutos, sin necesidad de ser un editor de video.", valueProps: ['Convierte texto en videos con voces de IA en más de 75 idiomas.', 'Acelera drásticamente la producción de contenido para redes sociales.', 'Acceso a millones de imágenes y clips de video para enriquecer tu contenido.'], easeOfUse: "Principiante", pricing: "Desde $21 USD/mes (fact. anual)", successCase: "Esencial para creadores de contenido, marketers de redes sociales y educadores que necesitan producir videos de forma rápida y constante.", chartData: { values: [4, 5, 5, 3, 4], bgColor: 'rgba(251, 146, 60, 0.2)', borderColor: 'rgba(251, 146, 60, 1)' }, useCases: { 'Marketing de Contenidos': [{ title: 'Videos para Redes', desc: 'Crea Reels, TikToks y Shorts a partir de un simple texto.' }, { title: 'Artículos a Video', desc: 'Convierte las entradas de tu blog en contenido de video atractivo.' }], 'Educación': [{ title: 'Tutoriales y Cursos', desc: 'Produce material educativo y de formación de manera rápida.' }] } },
+                canvaAI: { name: 'Canva Magic Studio', url: 'https://www.canva.com/magic-studio/', title: 'Canva: Diseño Inteligente para Todos', description: 'Diseño gráfico y marketing visual.', iconColor: 'text-purple-400', borderColor: 'border-purple-500', intro: 'Análisis de Canva Magic Studio. El gráfico muestra un perfil balanceado, destacando su increíble facilidad de uso y alta accesibilidad para todo tipo de usuario.', functionality: "Canva ha integrado un conjunto de herramientas de IA llamado Magic Studio. Permite generar y editar imágenes, crear textos de marketing (Magic Write), animar diseños y hasta generar presentaciones completas a partir de una simple frase. Es la solución ideal para quienes no son diseñadores pero necesitan crear visuales de alta calidad rápidamente.", valueProps: ['Democratiza el diseño gráfico para no-diseñadores.', 'Genera contenido visual y textual de forma instantánea.', 'Integrado en una plataforma de diseño familiar y muy fácil de usar.'], easeOfUse: "Principiante", pricing: "Incluido en Canva Pro (~$13 USD/mes)", successCase: "Imprescindible para emprendedores, community managers y cualquier profesional que necesite crear material de marketing visual de forma ágil.", chartData: { values: [5, 4, 4, 4, 5], bgColor: 'rgba(192, 132, 252, 0.2)', borderColor: 'rgba(192, 132, 252, 1)' }, useCases: { 'Diseño Rápido': [{ title: 'Texto a Imagen', desc: 'Genera imágenes únicas a partir de una descripción de texto.' }, { title: 'Edición Mágica', desc: 'Elimina o reemplaza objetos de una foto con IA.' }], 'Marketing Visual': [{ title: 'Redes Sociales', desc: 'Crea y redimensiona posts para diferentes plataformas con un clic.' }] } },
+                pictoryAI: { name: 'Pictory.ai', url: 'https://pictory.ai/', title: 'Pictory: Reutiliza tu Contenido', description: 'Reutilización de contenido en video.', iconColor: 'text-pink-400', borderColor: 'border-pink-500', intro: 'Análisis de Pictory. Transforma contenido largo en videos cortos y atractivos. El gráfico destaca su eficiencia y especialización en reutilización.', functionality: "Pictory se especializa en convertir contenido extenso como blogs, webinars y podcasts en videos cortos y dinámicos para redes sociales. Extrae automáticamente los puntos clave y añade subtítulos, haciendo que la reutilización de contenido sea extremadamente rápida.", valueProps: ['Maximiza el valor de tu contenido existente.', 'Crea videos cortos para redes sociales en minutos.', 'Añade subtítulos automáticamente para mayor alcance.'], easeOfUse: "Principiante", pricing: "Desde $19 USD/usuario/mes (fact. anual)", successCase: "Perfecto para podcasters, bloggers y coaches que tienen mucho contenido largo y quieren distribuirlo en plataformas de video corto.", chartData: { values: [5, 5, 5, 3, 4], bgColor: 'rgba(236, 72, 153, 0.2)', borderColor: 'rgba(236, 72, 153, 1)' }, useCases: {'Reutilización': [{title: 'Blog a Video', desc: 'Convierte artículos en resúmenes en video para YouTube o LinkedIn.'}, {title: 'Webinar a Clips', desc: 'Extrae los mejores momentos de un webinar para crear clips para redes.'}]} },
+                synthesiaAI: { name: 'Synthesia', url: 'https://www.synthesia.io/', title: 'Synthesia: Videos con Avatares IA', description: 'Videos con avatares de IA.', iconColor: 'text-blue-400', borderColor: 'border-blue-500', intro: 'Análisis de Synthesia. Crea videos profesionales con avatares de IA. El gráfico resalta su alta personalización y especialización, a un costo mayor.', functionality: "Synthesia te permite crear videos de calidad de estudio con avatares de IA hiperrealistas. Simplemente escribe un guion y la plataforma genera un video con un presentador hablando en el idioma que elijas. No necesitas cámaras, actores ni micrófonos.", valueProps: ['Reduce costos y tiempo de producción de video.', 'Crea videos de formación y comunicación a escala.', 'Más de 120 idiomas y avatares personalizados.'], easeOfUse: "Intermedio", pricing: "Desde $22 USD/mes (fact. anual)", successCase: "Ideal para departamentos de RRHH y formación corporativa, y para empresas que necesitan localizar videos de marketing a múltiples idiomas.", chartData: { values: [3, 4, 5, 5, 2], bgColor: 'rgba(96, 165, 250, 0.2)', borderColor: 'rgba(96, 165, 250, 1)' }, useCases: {'Formación': [{title: 'Videos de Onboarding', desc: 'Crea videos de bienvenida y formación para nuevos empleados.'}, {title: 'Tutoriales de Producto', desc: 'Desarrolla guías visuales sobre cómo usar tu software o producto.'}]} },
+                merlinAI: { name: 'Merlin.ai', url: 'https://merlin.foyer.work/', title: 'Merlin: Asistente en tu Navegador', description: 'Asistente de IA en el navegador.', iconColor: 'text-red-400', borderColor: 'border-red-500', intro: 'Análisis de Merlin. Un asistente de IA que te sigue a cualquier web. Su fortaleza es la facilidad de uso y la eficiencia para tareas rápidas.', functionality: "Merlin es una extensión de navegador que te da acceso a modelos como GPT-4 en cualquier página web. Puedes seleccionar texto para resumirlo, responder correos electrónicos directamente en Gmail, o generar ideas sin cambiar de pestaña. Es una navaja suiza para la productividad diaria.", valueProps: ['Aumenta la productividad en tareas diarias de escritura.', 'Acceso instantáneo a IA en cualquier sitio web.', 'Resume contenido de YouTube, blogs y PDFs.'], easeOfUse: "Principiante", pricing: "Plan gratuito generoso, Pro desde $19/mes.", successCase: "Indispensable para cualquier profesional, estudiante o emprendedor que pase mucho tiempo investigando y escribiendo en el navegador.", chartData: { values: [5, 5, 2, 3, 5], bgColor: 'rgba(248, 113, 113, 0.2)', borderColor: 'rgba(248, 113, 113, 1)' }, useCases: {'Productividad': [{title: 'Resumir Contenido', desc: 'Obtén resúmenes de artículos, videos o PDFs con un clic.'}, {title: 'Escritura Rápida', desc: 'Redacta y responde correos o mensajes en redes sociales al instante.'}]} },
+                h2oAI: { name: 'H2O.ai', url: 'https://h2o.ai/', title: 'H2O.ai: Machine Learning Avanzado', description: 'Plataforma de Machine Learning experta.', iconColor: 'text-yellow-400', borderColor: 'border-yellow-500', intro: 'Análisis de H2O.ai. Plataforma para crear modelos de IA a medida. El gráfico muestra su máxima especialización y personalización, para un público experto.', functionality: "H2O.ai es una plataforma líder para que las empresas construyan sus propios modelos de machine learning. Permite a los científicos de datos analizar grandes volúmenes de información para crear soluciones a medida, como modelos de predicción de demanda, segmentación de clientes o detección de fraude.", valueProps: ['Permite construir modelos de IA personalizados.', 'Plataforma de código abierto y flexible.', 'Líder en AutoML para acelerar el desarrollo.'], easeOfUse: "Experto", pricing: "Open Source disponible, planes Enterprise a medida.", successCase: "Utilizado por científicos de datos y grandes empresas en finanzas, salud y retail para construir soluciones de IA predictiva a medida.", chartData: { values: [1, 4, 5, 5, 2], bgColor: 'rgba(251, 191, 36, 0.2)', borderColor: 'rgba(251, 191, 36, 1)' }, useCases: {'Análisis Avanzado': [{title: 'Modelos Predictivos', desc: 'Crea modelos para predecir la rotación de clientes o la demanda de productos.'}, {title: 'Segmentación', desc: 'Analiza tus datos para encontrar nuevos segmentos de clientes.'}]} }
+            };
+
+            const deepDiveData = {
+                'Plan Gratuito': { notionAI: ['Incluido con usos limitados.'], pipedriveAI: ['Prueba gratuita de 14 días.'], flikiAI: ['5 minutos de créditos/mes.'], canvaAI: ['Créditos limitados para Magic.'], pictoryAI: ['3 videos de hasta 10 mins.'], synthesiaAI: ['No, solo demo gratis.'], merlinAI: ['Consultas diarias limitadas.'], h2oAI: ['Versión Open Source disponible.'] },
+                'Precios': { notionAI: ['Desde $8/usuario/mes'], pipedriveAI: ['Desde $29/usuario/mes'], flikiAI: ['Desde $21/mes'], canvaAI: ['Desde ~$13/mes (Plan Pro)'], pictoryAI: ['Desde $19/usuario/mes'], synthesiaAI: ['Desde $22/mes'], merlinAI: ['Desde $19/mes'], h2oAI: ['Planes Enterprise a medida.'] },
+                'Facilidad de Uso': { notionAI: ['Principiante'], pipedriveAI: ['Intermedio'], flikiAI: ['Principiante'], canvaAI: ['Principiante'], pictoryAI: ['Principiante'], synthesiaAI: ['Intermedio'], merlinAI: ['Principiante'], h2oAI: ['Experto'] },
+                'Casos de Éxito': { notionAI: ['Equipos remotos, agencias.'], pipedriveAI: ['PYMES B2B, SaaS.'], flikiAI: ['Creadores de contenido, educadores.'], canvaAI: ['Emprendedores, marketers.'], pictoryAI: ['Podcasters, coaches.'], synthesiaAI: ['Formación corporativa, RRHH.'], merlinAI: ['Profesionales, estudiantes.'], h2oAI: ['Científicos de datos, grandes empresas.'] }
+            };
+            
+            let currentToolKey = null;
+            let impactChart = null;
+            
+            const toolSelectorContainer = document.querySelector('#tool-selector .grid');
+            const dynamicContentArea = document.getElementById('dynamic-content-area');
+            const overviewTitle = document.getElementById('overview-title');
+            const overviewIntro = document.getElementById('overview-intro');
+            const valueList = document.getElementById('overview-value-list');
+            const overviewIdealFor = document.getElementById('overview-ideal-for');
+            const useCaseTabsContainer = document.getElementById('use-case-tabs');
+            const useCaseContentContainer = document.getElementById('use-case-content');
+            
+            const companyTypeSelector = document.getElementById('companyType');
+            const sectorSelector = document.getElementById('sector');
+            const businessDescriptionInput = document.getElementById('business-description');
+            const improvementGoalInput = document.getElementById('improvement-goal');
+            const currentProblemInput = document.getElementById('current-problem');
+            const getRecommendationBtn = document.getElementById('get-recommendation-btn');
+            const recommendationResultContainer = document.getElementById('recommendation-result');
+
+            const deepDiveToolSelector = document.getElementById('deep-dive-tool-selector');
+            const deepDiveTabsContainer = document.getElementById('deep-dive-tabs');
+            const deepDiveContentContainer = document.getElementById('deep-dive-content');
+
+            const infoModal = document.getElementById('info-modal');
+            const closeInfoModalBtn = document.getElementById('close-info-modal-btn');
+            const infoModalTitle = document.getElementById('info-modal-title');
+            const infoModalContent = document.getElementById('info-modal-content');
+
+            const strategyModal = document.getElementById('strategy-modal');
+            const copyStrategyBtn = document.getElementById('copy-strategy-btn');
+            const closeModalBtnStrategy = document.getElementById('close-modal-btn-strategy');
+            const strategyModalContent = document.getElementById('strategy-modal-content');
+            const copyToast = document.getElementById('copy-toast');
+
+            const themeToggleBtn = document.getElementById('theme-toggle');
+            const lightIcon = document.getElementById('theme-icon-light');
+            const darkIcon = document.getElementById('theme-icon-dark');
+            const menuToggle = document.getElementById('menu-toggle');
+            const mobileMenu = document.getElementById('mobile-menu');
+
+            function createToolCards() {
+                toolSelectorContainer.innerHTML = '';
+                for (const key in aiData) {
+                    const tool = aiData[key];
+                    const cardHTML = `
+                        <div class="tool-card-container bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border-2 ${tool.borderColor} transition-all duration-300 ease-in-out flex flex-col justify-between">
+                            <div id="select-${key}" data-tool-key="${key}" class="flex-grow cursor-pointer">
+                                <h2 class="text-2xl font-bold ${tool.iconColor} mb-2">${tool.name}</h2>
+                                <p class="text-gray-600 dark:text-gray-400">${tool.description}</p>
+                            </div>
+                            <div class="mt-4 flex items-center justify-between">
+                                <button class="see-more-btn text-sm font-medium ${tool.iconColor} hover:underline" data-tool="${key}">Ver más</button>
+                                <a href="${tool.url}" target="_blank" rel="noopener noreferrer" class="link-btn inline-flex items-center text-sm font-medium text-gray-500 dark:text-gray-400 hover:underline">Sitio Web <span class="ml-1">→</span></a>
+                            </div>
+                        </div>`;
+                    toolSelectorContainer.innerHTML += cardHTML;
+                }
+            }
+
+            function initChart() {
+                if (impactChart) {
+                    impactChart.destroy();
+                }
+                const isDark = document.documentElement.classList.contains('dark');
+                const labelColor = isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)';
+                const angleLineColor = isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)';
+
+                const ctx = document.getElementById('impactChart').getContext('2d');
+                impactChart = new Chart(ctx, {
+                    type: 'radar', data: { labels: chartLabels, datasets: [{ label: '', data: [], backgroundColor: [], borderColor: [], borderWidth: 2, pointBackgroundColor: [], pointBorderColor: '#fff', pointHoverBackgroundColor: '#fff', pointHoverBorderColor: [] }] },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { r: { beginAtZero: true, max: 5, ticks: { stepSize: 1, display: false }, pointLabels: { color: labelColor, font: { size: 12 } }, angleLines: { color: angleLineColor }, grid: { color: angleLineColor } } }, plugins: { legend: { display: false } } }
+                });
+            }
+
+            function updateChartTheme() {
+                if (!impactChart) return;
+                const isDark = document.documentElement.classList.contains('dark');
+                const labelColor = isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)';
+                const angleLineColor = isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)';
+                impactChart.options.scales.r.pointLabels.color = labelColor;
+                impactChart.options.scales.r.angleLines.color = angleLineColor;
+                impactChart.options.scales.r.grid.color = angleLineColor;
+                impactChart.update();
+            }
+
+            function updateUI(toolKey) {
+                if (!aiData[toolKey] || currentToolKey === toolKey) return;
+                currentToolKey = toolKey;
+                const currentToolData = aiData[toolKey];
+                dynamicContentArea.style.opacity = '0';
+                
+                setTimeout(() => {
+                    overviewTitle.textContent = currentToolData.title;
+                    overviewIntro.textContent = currentToolData.intro;
+                    overviewIdealFor.textContent = currentToolData.successCase;
+                    
+                    valueList.innerHTML = '';
+                    currentToolData.valueProps.forEach(prop => {
+                        valueList.innerHTML += `<li class="flex items-start"><span class="text-green-500 dark:text-green-400 mr-3 mt-1">&#10003;</span><span>${prop}</span></li>`;
+                    });
+
+                    const chartDataset = impactChart.data.datasets[0];
+                    chartDataset.data = currentToolData.chartData.values;
+                    chartDataset.backgroundColor = currentToolData.chartData.bgColor;
+                    chartDataset.borderColor = currentToolData.chartData.borderColor;
+                    impactChart.update();
+
+                    useCaseTabsContainer.innerHTML = '';
+                    const categories = Object.keys(currentToolData.useCases);
+                    categories.forEach((category, index) => {
+                        const button = document.createElement('button');
+                        button.textContent = category;
+                        button.className = 'tab-btn px-4 py-2 rounded-lg font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600';
+                        button.dataset.category = category;
+                        if (index === 0) { button.classList.add('active-tab'); }
+                        button.onclick = () => showUseCases(category);
+                        useCaseTabsContainer.appendChild(button);
+                    });
+                    
+                    showUseCases(categories[0]);
+                    dynamicContentArea.style.opacity = '1';
+                    document.querySelectorAll('.tool-card-container').forEach(card => card.classList.remove('active-tool'));
+                    document.querySelector(`#select-${toolKey}`).parentElement.classList.add('active-tool');
+                    
+                    const checkbox = document.querySelector(`.tool-checkbox[value="${toolKey}"]`);
+                    if(checkbox && !checkbox.checked) {
+                        checkbox.checked = true;
+                        checkbox.dispatchEvent(new Event('change'));
+                    }
+
+                }, 300);
+            }
+
+            function showUseCases(category) {
+                const useCases = aiData[currentToolKey].useCases[category];
+                useCaseContentContainer.innerHTML = '';
+                if (!useCases) return;
+                useCases.forEach(uc => {
+                    useCaseContentContainer.innerHTML += `<div class="bg-gray-100 dark:bg-gray-700/50 p-6 rounded-lg border border-gray-200 dark:border-gray-700"><h5 class="font-bold text-lg mb-2 text-gray-800 dark:text-gray-200">${uc.title}</h5><p class="text-gray-600 dark:text-gray-400">${uc.desc}</p></div>`;
+                });
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.classList.toggle('active-tab', btn.dataset.category === category);
+                });
+            }
+
+            async function generateStrategy(recommendedTools, improvementGoal, currentProblem) {
+                strategyModal.classList.remove('hidden');
+                strategyModalContent.innerHTML = `<div class="flex flex-col items-center justify-center h-64"><div class="loader"></div><p class="mt-4 text-gray-600 dark:text-gray-400">Generando estrategia con Gemini...</p></div>`;
+
+                const companyType = companyTypeSelector.options[companyTypeSelector.selectedIndex].text;
+                const sector = sectorSelector.options[sectorSelector.selectedIndex].text;
+                const businessDescription = businessDescriptionInput.value;
+                const toolNames = recommendedTools.map(t => aiData[t].name).join(' y ');
+
+                const prompt = `Actúa como un consultor experto en transformación digital para PYMES en Colombia. Crea un plan de implementación detallado para una empresa con el siguiente perfil:
+                - **Tipo de Empresa:** ${companyType}
+                - **Sector Económico:** ${sector}
+                - **Descripción del Negocio:** "${businessDescription}"
+                - **Objetivo Principal:** "${improvementGoal}"
+                - **Desafío Actual:** "${currentProblem}"
+                - **Herramientas Recomendadas:** ${toolNames}
+
+                El plan debe ser claro, accionable y en español colombiano. Formatea la respuesta en HTML simple (usando <h3>, <ul>, <li>, <strong>, <p>) y debe incluir:
+                <h3>1. Fases Clave del Proyecto (Plan 30-60-90 días)</h3>
+                <h3>2. KPIs para Medir el Éxito</h3>
+                <h3>3. Posibles Desafíos y Cómo Superarlos</h3>`;
+
+                const payload = { contents: [{ parts: [{ text: prompt }] }] };
+                const apiKey = "AIzaSyCGpsah9RYkMF5ca00fkeqoYOb89mN1NJs"; // User provided API key
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                try {
+                    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    if (!response.ok) { throw new Error(`API request failed with status ${response.status}`); }
+                    const result = await response.json();
+                    
+                    if (result.candidates && result.candidates[0]?.content.parts[0].text) {
+                        strategyModalContent.innerHTML = result.candidates[0].content.parts[0].text;
+                    } else {
+                        strategyModalContent.innerHTML = `<p class="text-red-500">No se pudo generar una estrategia. La respuesta de la IA no fue válida.</p>`;
+                    }
+                } catch (error) {
+                    console.error("Error fetching strategy:", error);
+                    strategyModalContent.innerHTML = `<p class="text-red-500">Ocurrió un error al contactar el servicio de IA. Revisa la consola para más detalles.</p>`;
+                }
+            }
+            
+            function updateRecommendation() {
+                const companyType = companyTypeSelector.value;
+                const sector = sectorSelector.value;
+                const improvementGoal = improvementGoalInput.value;
+                const currentProblem = currentProblemInput.value;
+
+                const scores = { notionAI: 0, pipedriveAI: 0, flikiAI: 0, canvaAI: 0, pictoryAI: 0, synthesiaAI: 0, merlinAI: 1, h2oAI: 0 };
+                
+                if (sector === 'terciario' || sector === 'cuaternario') { scores.pipedriveAI += 2; scores.canvaAI +=1; scores.flikiAI +=1; scores.pictoryAI += 1; scores.synthesiaAI += 1; }
+                if (sector === 'primario' || sector === 'secundario') { scores.notionAI += 2; scores.pipedriveAI += 1; scores.h2oAI += 2; }
+                
+                if (companyType === 'informal' || companyType === 'micro') { scores.canvaAI += 2; scores.flikiAI += 2; scores.pictoryAI += 2; scores.merlinAI += 1; }
+                if (companyType === 'pequena') { scores.pipedriveAI += 2; scores.notionAI += 1; }
+                if (companyType === 'mediana') { scores.pipedriveAI += 2; scores.notionAI += 2; scores.synthesiaAI += 2; scores.h2oAI += 2; }
+                
+                const textInput = (improvementGoal + " " + currentProblem).toLowerCase();
+                if (textInput.includes("video") || textInput.includes("redes") || textInput.includes("contenido")) { scores.flikiAI += 2; scores.pictoryAI += 2; scores.canvaAI += 1; }
+                if (textInput.includes("vender") || textInput.includes("cliente") || textInput.includes("crm")) { scores.pipedriveAI += 2; }
+                if (textInput.includes("organizar") || textInput.includes("proyectos") || textInput.includes("documentos") || textInput.includes("tareas")) { scores.notionAI += 2; }
+                if (textInput.includes("diseño") || textInput.includes("imagen") || textInput.includes("posts") || textInput.includes("logos")) { scores.canvaAI += 2; }
+                if (textInput.includes("formación") || textInput.includes("capacitación") || textInput.includes("presentación")) { scores.synthesiaAI += 2; }
+                 if (textInput.includes("rápido") || textInput.includes("escribir") || textInput.includes("resumir") || textInput.includes("navegador")) { scores.merlinAI += 2; }
+                if (textInput.includes("datos") || textInput.includes("análisis") || textInput.includes("predecir") || textInput.includes("modelo")) { scores.h2oAI += 2; }
+
+                const sortedScores = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+                const topScore = sortedScores[0][1];
+                let recommendedTools = sortedScores.filter(item => item[1] === topScore && item[1] > 0).map(item => item[0]);
+
+                if(recommendedTools.length === 0) {
+                     recommendedTools = ['notionAI', 'canvaAI'];
+                }
+
+                let justification = `Para una <strong>${companyTypeSelector.options[companyTypeSelector.selectedIndex].text}</strong> del <strong>sector ${sectorSelector.options[sectorSelector.selectedIndex].text}</strong>, las herramientas más efectivas son:`;
+                
+                recommendationResultContainer.classList.remove('hidden');
+
+                let toolsHTML = '<div class="flex flex-wrap justify-center gap-4 my-4">';
+                recommendedTools.forEach(toolKey => {
+                    const toolData = aiData[toolKey];
+                    toolsHTML += `<div class="flex items-center bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"><span class="font-bold text-2xl mr-3" style="color:${toolData.chartData.borderColor};">&#9679;</span><div><p class="font-bold text-gray-800 dark:text-gray-200">${toolData.name}</p><p class="text-sm text-gray-500 dark:text-gray-400">${toolData.description}</p></div></div>`;
+                });
+                toolsHTML += '</div>';
+
+                const strategyButtonHTML = `<div class="mt-6 text-center"><button id="generate-strategy-btn" class="bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition-colors duration-300">✨ Generar Estrategia de Implementación</button></div>`;
+
+                recommendationResultContainer.innerHTML = `<p class="text-center text-gray-600 dark:text-gray-400">${justification}</p>${toolsHTML}${strategyButtonHTML}`;
+                
+                document.getElementById('generate-strategy-btn').addEventListener('click', () => generateStrategy(recommendedTools, improvementGoal, currentProblem));
+            }
+
+            function showDeepDiveContent() {
+                const activeTab = document.querySelector('.deep-dive-tab.active');
+                if (!activeTab) return;
+                const category = activeTab.dataset.category;
+
+                const selectedTools = Array.from(document.querySelectorAll('.tool-checkbox:checked')).map(cb => cb.value);
+
+                deepDiveContentContainer.innerHTML = '';
+
+                if (selectedTools.length === 0) {
+                    deepDiveContentContainer.innerHTML = `<p class="text-center text-gray-500 col-span-full">Selecciona al menos una herramienta para comparar.</p>`;
+                    return;
+                }
+
+                selectedTools.forEach(toolKey => {
+                    const toolData = aiData[toolKey];
+                    const categoryData = deepDiveData[category][toolKey];
+                    const borderColorClass = toolData.chartData.borderColor.replace('rgba', 'rgb').replace(/, 1\)$/, ')');
+                    
+                    let listItems = (Array.isArray(categoryData) ? categoryData : [categoryData]).map(item => `<li class="flex items-start"><span class="mr-2 mt-1 text-gray-400 dark:text-gray-500">&#8227;</span><span class="text-gray-700 dark:text-gray-300">${item}</span></li>`).join('');
+
+                    deepDiveContentContainer.innerHTML += `
+                        <div class="bg-gray-100 dark:bg-gray-800/50 p-6 rounded-lg border-t-4" style="border-top-color: ${borderColorClass};">
+                            <h4 class="font-bold text-lg mb-3 ${toolData.iconColor}">${toolData.name}</h4>
+                            <ul class="space-y-2 text-sm">${listItems}</ul>
+                        </div>
+                    `;
+                });
+            }
+            
+            function showInfoModal(toolKey) {
+                const toolData = aiData[toolKey];
+                if (!toolData) return;
+                
+                infoModalTitle.textContent = toolData.title;
+                infoModalContent.textContent = toolData.functionality;
+                infoModal.classList.remove('hidden');
+            }
+
+            function initDeepDive() {
+                // Init Tool Selector
+                deepDiveToolSelector.innerHTML = '';
+                for (const key in aiData) {
+                    const tool = aiData[key];
+                    const selectorHTML = `
+                        <div>
+                            <input type="checkbox" id="check-${key}" value="${key}" class="hidden tool-checkbox">
+                            <label for="check-${key}" class="flex items-center space-x-2 cursor-pointer p-2 rounded-lg border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                <span class="w-4 h-4 rounded-full" style="background-color: ${tool.chartData.borderColor}"></span>
+                                <span class="font-semibold text-sm">${tool.name}</span>
+                            </label>
+                        </div>
+                    `;
+                    deepDiveToolSelector.innerHTML += selectorHTML;
+                }
+                document.querySelectorAll('.tool-checkbox').forEach(cb => cb.addEventListener('change', showDeepDiveContent));
+
+                // Init Category Tabs
+                const categories = Object.keys(deepDiveData);
+                deepDiveTabsContainer.innerHTML = '';
+                categories.forEach((category, index) => {
+                    const button = document.createElement('button');
+                    button.textContent = category;
+                    button.className = 'deep-dive-tab px-4 py-2 rounded-lg font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600';
+                    button.dataset.category = category;
+                    if (index === 0) { button.classList.add('active'); }
+                    button.addEventListener('click', () => {
+                        document.querySelectorAll('.deep-dive-tab').forEach(btn => btn.classList.remove('active'));
+                        button.classList.add('active');
+                        showDeepDiveContent();
+                    });
+                    deepDiveTabsContainer.appendChild(button);
+                });
+                showDeepDiveContent();
+            }
+
+            function handleThemeToggle() {
+                const isDark = document.documentElement.classList.toggle('dark');
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                lightIcon.classList.toggle('hidden', isDark);
+                darkIcon.classList.toggle('hidden', !isDark);
+                updateChartTheme();
+            }
+
+            function handleScrollSpy() {
+                const sections = document.querySelectorAll('main > section[id]');
+                const navLinks = document.querySelectorAll('.nav-link');
+                const scrollY = window.pageYOffset;
+
+                sections.forEach(current => {
+                    const sectionHeight = current.offsetHeight;
+                    const sectionTop = current.offsetTop - 100;
+                    let sectionId = current.getAttribute('id');
+                    
+                    if (scrollY >= sectionTop && scrollY <= sectionTop + sectionHeight) {
+                        navLinks.forEach(link => {
+                           link.classList.remove('active');
+                           if(link.getAttribute('href') === '#' + sectionId) {
+                               link.classList.add('active');
+                           }
+                        });
+                    }
+                });
+            }
+            
+            // Initial Setup
+            createToolCards();
+            
+            if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+            lightIcon.classList.toggle('hidden', document.documentElement.classList.contains('dark'));
+            darkIcon.classList.toggle('hidden', !document.documentElement.classList.contains('dark'));
+
+            themeToggleBtn.addEventListener('click', handleThemeToggle);
+            getRecommendationBtn.addEventListener('click', updateRecommendation);
+            closeInfoModalBtn.addEventListener('click', () => infoModal.classList.add('hidden'));
+            closeModalBtnStrategy.addEventListener('click', () => strategyModal.classList.add('hidden'));
+
+            toolSelectorContainer.addEventListener('click', (e) => {
+                const card = e.target.closest('[data-tool-key]');
+                if(card) {
+                    updateUI(card.dataset.toolKey);
+                    document.getElementById('overview').scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+            
+            toolSelectorContainer.addEventListener('click', e => {
+                const seeMoreBtn = e.target.closest('.see-more-btn');
+                const linkBtn = e.target.closest('.link-btn');
+
+                if (seeMoreBtn) {
+                    e.stopPropagation();
+                    showInfoModal(seeMoreBtn.dataset.tool);
+                }
+                if (linkBtn) {
+                    e.stopPropagation();
+                }
+            });
+
+            menuToggle.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+
+            document.querySelectorAll('.mobile-nav-link, .nav-link').forEach(link => {
+                link.addEventListener('click', () => {
+                    if(!mobileMenu.classList.contains('hidden')){
+                         mobileMenu.classList.add('hidden');
+                    }
+                });
+            });
+            
+            window.addEventListener('scroll', handleScrollSpy);
+
+            window.addEventListener('mousemove', (e) => {
+                document.documentElement.style.setProperty('--x', e.clientX + 'px');
+                document.documentElement.style.setProperty('--y', e.clientY + 'px');
+            });
+
+            copyStrategyBtn.addEventListener('click', () => {
+                const contentToCopy = strategyModalContent.innerText;
+                const textarea = document.createElement('textarea');
+                textarea.value = contentToCopy;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+
+                copyToast.classList.remove('opacity-0');
+                setTimeout(() => {
+                    copyToast.classList.add('opacity-0');
+                }, 2000);
+            });
+
+            initChart();
+            initDeepDive();
+            // Start with no tool selected
+            // updateUI('notionAI'); 
+            dynamicContentArea.style.opacity = '1';
+            updateChartTheme();
+        });
+    </script>
+</body>
+</html>
